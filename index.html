@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Irawan test for HRW</title>
+</head>
+<body>
+  <div class="selectData">
+    <p>Task 2 - Select emails to show:</p>
+      <div>
+        <input type="radio" onclick="showEmail('all')" name="emails-type" checked>
+        <label for="huey">All email - Task 2.1</label>
+      </div>
+
+      <div>
+        <input type="radio" onclick="showEmail('student')" name="emails-type">
+        <label for="dewey">Student emails - Task 2.2</label>
+      </div>
+
+      <div>
+        <input type="radio" onclick="showEmail('staff')" name="emails-type">
+        <label for="louie">Staff emails</label>
+      </div>
+  </div>
+  <br>
+  <p>show email of selected data :</p>
+  <div class="show-emails"></div>
+  <script type="text/javascript" src="jsonview.js"></script>
+  <script type="text/javascript">
+    function showEmail(selectedData){
+      if (selectedData === "student"){
+        getJsonData('http://recruiting.hs-rw.de/rest.php/endpoint=student');
+      } else if (selectedData === "staff") {
+        getJsonData('http://recruiting.hs-rw.de/rest.php/endpoint=staff');
+      } else {
+        getJsonData('http://recruiting.hs-rw.de/rest.php/endpoint=contactdetails');
+      }
+    }
+
+    function getJsonData(urlFilter){
+
+      // list of person_id of selected data
+      var personIDs = null;
+
+      // serial function to get response of server & json data
+      async function postData(url = '', data = {}) {
+        const response = await fetch(url, {
+          method: 'POST', // GET, POST, PUT, DELETE, etc.
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data) // body data type must match "Content-Type" header
+        }).then((response) => {
+            if (response.status >= 400 && response.status < 600) {
+              throw new Error("Bad response from server");
+            }
+            return response;
+        }).catch((err) => {
+          console.log(err);
+        });
+        return response.json(); // parses JSON response into native JavaScript objects
+      }
+
+      //get and show email
+      postData(urlFilter, {})
+      .then(dataFilters => {
+        personIDs = dataFilters[0].map(function(detail){
+          return detail.person_id;
+        });
+        postData('http://recruiting.hs-rw.de/rest.php/endpoint=contactdetails', {})
+        .then(contactDetails => {
+          let selectedData = personIDs;
+
+          //filter main data based on selected person ID
+          var filterContact = contactDetails[0].filter(contact =>
+            selectedData.includes(contact.person_id)
+          )
+
+          //get only email data from json
+          var emails = filterContact.map(function(contactdetail){
+            return contactdetail.email;
+          });
+
+          // visualize the data
+          document.querySelector('.show-emails').innerHTML = ''; //clear div element
+          const tree = jsonview.create(emails);
+          jsonview.render(tree, document.querySelector('.show-emails'));
+          jsonview.expand(tree);
+        })
+      })
+    }
+
+    showEmail("default");
+  </script>
+</body>
+</html>
